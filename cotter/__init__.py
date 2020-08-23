@@ -62,7 +62,7 @@ class ClientRedirectHandler(BaseHTTPRequestHandler):
         query = self.path.split('?', 1)[-1]
         query = dict(parse_qsl(query))
         self.server.query_params = query
-        self.wfile.write(file)
+        self.wfile.write(file.read())
 
     def log_message(self, format, *args):
         """Do not log messages to stdout while running as command line program."""
