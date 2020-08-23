@@ -49,20 +49,20 @@ class ClientRedirectHandler(BaseHTTPRequestHandler):
     Waits for a single request and parses the query parameters
     into the servers query_params and then stops serving.
     """
-    def do_GET(s):
+    def do_GET(self):
         """Handle a GET request.
         Parses the query parameters and prints a message
         if the flow has completed. Note that we can't detect
         if an error occurred.
         """
-        f = open('cotter_login_success.html', 'rb')
-        s.send_response(200)
-        s.send_header("Content-type", "text/html")
-        s.end_headers()
-        query = s.path.split('?', 1)[-1]
+        file = open(self.redirect_path, 'rb')
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        query = self.path.split('?', 1)[-1]
         query = dict(parse_qsl(query))
-        s.server.query_params = query
-        s.wfile.write(f.read())
+        self.server.query_params = query
+        self.wfile.write(file)
 
     def log_message(self, format, *args):
         """Do not log messages to stdout while running as command line program."""
@@ -84,16 +84,14 @@ def get_access_token(api_key, code, challenge_id, code_verifier, redirect_url):
         "challenge_id": int(challenge_id),
         "redirect_url": redirect_url
     }
-    print(data)
     response = requests.post(url, json=data, headers=headers)
 
-    if response.status_code != 200:
-        response.raise_for_status()
+    response.raise_for_status()
 
     return response.json()
 
 
-def login(api_key, port, identity_type, auth_method):
+def login(api_key, port, identity_type, auth_method, redirect_page=None):
     state = get_random_string(10)
 
     # Generate Code Challenge and Code Verfiier
@@ -118,6 +116,7 @@ def login(api_key, port, identity_type, auth_method):
     print("Open this link to login at your browser: " + full_url)
 
     # Listen for redirect from browser with authorization code
+    ClientRedirectHandler.redirect_path = "cotter_login_success.html" if redirect_page is None else redirect_page
     httpd = ClientRedirectServer(('localhost', port), ClientRedirectHandler)
     httpd.handle_request()
     if 'error' in httpd.query_params:
@@ -132,17 +131,17 @@ def login(api_key, port, identity_type, auth_method):
         print('Failed redirecting after authentication.')
 
 
-def login_with_email_link(api_key, port):
-    return login(api_key, port, "EMAIL", "MAGIC_LINK")
+def login_with_email_link(api_key, port, redirect_page=None):
+    return login(api_key, port, "EMAIL", "MAGIC_LINK", redirect_page)
 
 
-def login_with_email_otp(api_key, port):
-    return login(api_key, port, "EMAIL", "OTP")
+def login_with_email_otp(api_key, port, redirect_page=None):
+    return login(api_key, port, "EMAIL", "OTP", redirect_page)
 
 
-def login_with_phone_link(api_key, port):
-    return login(api_key, port, "PHONE", "MAGIC_LINK")
+def login_with_phone_link(api_key, port, redirect_page=None):
+    return login(api_key, port, "PHONE", "MAGIC_LINK", redirect_page)
 
 
-def login_with_phone_otp(api_key, port):
-    return login(api_key, port, "PHONE", "OTP")
+def login_with_phone_otp(api_key, port, redirect_page=None):
+    return login(api_key, port, "PHONE", "OTP", redirect_page)
